@@ -8,36 +8,40 @@ import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
-import org.aspectj.lang.annotation.Pointcut;
-import org.springframework.web.multipart.MultipartFile;
 
+/**
+ * Aspect for logging annotated methods.
+ */
 @Aspect
 public class MethodLogger {
   private static final Logger log = LogManager.getLogger(MethodLogger.class);
   private final ObjectMapper objectMapper;
 
-  @Pointcut("@annotation(loggable)")
-  public void loggableMethod(Loggable loggable) {
-  }
-
-  @Before(
-      value = "loggableMethod(loggable)",
-      argNames = "joinPoint,loggable"
-  )
+  /**
+   * Before advice for logging method entry.
+   *
+   * @param joinPoint JoinPoint instance.
+   * @param loggable  Loggable annotation instance.
+   */
+  @Before("execution(* *(..)) && @annotation(loggable)")
   public void beforeLoggableMethod(JoinPoint joinPoint, Loggable loggable) {
     String methodName = joinPoint.getSignature().getName();
     String className = joinPoint.getSignature().getDeclaringType().getSimpleName();
-    StringBuilder logMessage = (new StringBuilder()).append("Entering method: ").append(className).append(".").append(methodName);
+    StringBuilder logMessage = new StringBuilder()
+        .append("Entering method: ")
+        .append(className)
+        .append(".")
+        .append(methodName);
+
     if (loggable.showData()) {
       Object[] args = joinPoint.getArgs();
 
-      for (int i = 0; i < args.length && !(args[i] instanceof MultipartFile); ++i) {
-        logMessage.append(". ").append("Argument ").append(i).append(": ");
-
+      for (int i = 0; i < args.length; ++i) {
+        logMessage.append(". Argument ").append(i).append(": ");
         try {
           String argJson = this.objectMapper.writeValueAsString(args[i]);
           logMessage.append(argJson);
-        } catch (JsonProcessingException var9) {
+        } catch (JsonProcessingException e) {
           logMessage.append("[Unable to serialize to JSON]");
         }
       }
@@ -46,28 +50,44 @@ public class MethodLogger {
     log.debug(logMessage.toString());
   }
 
+  /**
+   * AfterReturning advice for logging method return.
+   *
+   * @param joinPoint JoinPoint instance.
+   * @param loggable  Loggable annotation instance.
+   * @param result    Object returned by the method.
+   */
   @AfterReturning(
-      value = "loggableMethod(loggable)",
-      returning = "result",
-      argNames = "joinPoint,loggable,result"
+      value = "execution(* *(..)) && @annotation(loggable)",
+      returning = "result"
   )
   public void afterReturningLoggableMethod(JoinPoint joinPoint, Loggable loggable, Object result) {
     String methodName = joinPoint.getSignature().getName();
     String className = joinPoint.getSignature().getDeclaringType().getSimpleName();
-    StringBuilder logMessage =
-        (new StringBuilder()).append("Exiting method: ").append(className).append(".").append(methodName).append(". Result: ");
+    StringBuilder logMessage = new StringBuilder()
+        .append("Exiting method: ")
+        .append(className)
+        .append(".")
+        .append(methodName)
+        .append(". Result: ");
+
     if (loggable.showData()) {
       try {
         String resultJson = this.objectMapper.writeValueAsString(result);
         logMessage.append(resultJson);
-      } catch (JsonProcessingException var8) {
+      } catch (JsonProcessingException e) {
         logMessage.append("[Unable to serialize to JSON]");
       }
     }
 
-    log.debug(logMessage);
+    log.debug(logMessage.toString());
   }
 
+  /**
+   * Constructor for MethodLogger.
+   *
+   * @param objectMapper ObjectMapper instance.
+   */
   public MethodLogger(ObjectMapper objectMapper) {
     this.objectMapper = objectMapper;
   }
