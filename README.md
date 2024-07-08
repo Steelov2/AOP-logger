@@ -33,7 +33,7 @@ The project includes the following components:
    ```bash
    git clone https://github.com/your-username/aop-logger.git
    cd aop-logger
-2. **Build and run the application:**
+2. **Build the application:**
    ```bash
    mvn clean install
 3. **Add the dependency to another project**
